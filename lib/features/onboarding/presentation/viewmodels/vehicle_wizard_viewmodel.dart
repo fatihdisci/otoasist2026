@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../features/garage/domain/models/vehicle_model.dart';
-import '../../../../features/garage/domain/repositories/vehicle_repository.dart';
-import '../../../../features/garage/presentation/providers/garage_providers.dart';
+import '../../../garage/domain/models/vehicle_model.dart';
+import '../../../garage/domain/repositories/vehicle_repository.dart';
+import '../../../garage/presentation/providers/garage_providers.dart';
 
-// State
+// State Sınıfı (Değişiklik yok)
 class WizardState {
   final int currentStep;
   final String? selectedBrand;
@@ -13,7 +13,7 @@ class WizardState {
   final TransmissionType selectedTransmission;
   final String engineInput;
   final int? kmInput;
-  final bool isLoading; // Çember kontrolü
+  final bool isLoading;
 
   WizardState({
     this.currentStep = 0,
@@ -27,7 +27,6 @@ class WizardState {
     this.isLoading = false,
   });
 
-  // Validasyonlar
   bool get isStep1Valid => selectedBrand != null && selectedModel != null && selectedYear != null;
   bool get isStep2Valid => engineInput.isNotEmpty;
   bool get isStep3Valid => kmInput != null && kmInput! > 0;
@@ -57,25 +56,20 @@ class WizardState {
   }
 }
 
-// ViewModel
+// ViewModel (GÜNCELLENDİ)
 class VehicleWizardViewModel extends StateNotifier<WizardState> {
   final IVehicleRepository _repository;
 
   VehicleWizardViewModel(this._repository) : super(WizardState());
 
   void nextStep() {
-    if (state.currentStep < 2) {
-      state = state.copyWith(currentStep: state.currentStep + 1);
-    }
+    if (state.currentStep < 2) state = state.copyWith(currentStep: state.currentStep + 1);
   }
 
   void previousStep() {
-    if (state.currentStep > 0) {
-      state = state.copyWith(currentStep: state.currentStep - 1);
-    }
+    if (state.currentStep > 0) state = state.copyWith(currentStep: state.currentStep - 1);
   }
 
-  // Setters
   void setBrand(String val) => state = state.copyWith(selectedBrand: val, selectedModel: null, selectedYear: null);
   void setModel(String val) => state = state.copyWith(selectedModel: val);
   void setYear(int val) => state = state.copyWith(selectedYear: val);
@@ -84,14 +78,14 @@ class VehicleWizardViewModel extends StateNotifier<WizardState> {
   void setEngine(String val) => state = state.copyWith(engineInput: val);
   void setKm(int val) => state = state.copyWith(kmInput: val);
 
-  // SAVE VEHICLE (Düzeltilen Kısım)
+  // --- KRİTİK DÜZELTME BURADA ---
   Future<void> submitVehicle(String userId) async {
-    // 1. Çemberi Başlat
+    // 1. Loading başlat
     state = state.copyWith(isLoading: true);
 
     try {
       final vehicle = Vehicle(
-        id: '', // Repo oluşturacak
+        id: '',
         userId: userId,
         brand: state.selectedBrand!,
         model: state.selectedModel!,
@@ -105,14 +99,11 @@ class VehicleWizardViewModel extends StateNotifier<WizardState> {
 
       await _repository.addVehicle(userId, vehicle);
       
-      // Başarılı olduğunda burada ekstra bir şey yapmaya gerek yok,
-      // UI tarafı await bitince sayfayı kapatacak.
-      
+      // Hata yoksa buraya gelir, finally bloğu çalışır ve ekran kapanır.
     } catch (e) {
-      // Hata olursa UI'a fırlat
-      rethrow;
+      rethrow; // Hatayı UI'ya gönder
     } finally {
-      // 2. İşlem ne olursa olsun çemberi durdur
+      // 2. İşlem sonucu ne olursa olsun (başarılı/hatalı) Loading'i durdur
       if (mounted) {
         state = state.copyWith(isLoading: false);
       }
