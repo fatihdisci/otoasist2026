@@ -8,15 +8,46 @@ class AiLocalDataSource {
   AiLocalDataSource(this._firestore);
 
   Future<Map<String, dynamic>?> getCachedAnalysis(String signature) async {
-    // Cache'i şimdilik pas geçiyoruz ki her seferinde logları görelim
-    return null; 
+    try {
+      final doc = await _firestore.collection('ai_cache').doc(signature).get();
+      
+      if (doc.exists && doc.data() != null) {
+        // Cache'de veri var, ancak eski olabilir (opsiyonel: TTL kontrolü eklenebilir)
+        final data = doc.data()!;
+        // Timestamp alanlarını kontrol et ve gerekirse güncelle
+        if (data.containsKey('cachedAt')) {
+          final cachedAt = (data['cachedAt'] as Timestamp).toDate();
+          final daysSinceCache = DateTime.now().difference(cachedAt).inDays;
+          
+          // 30 günden eski cache'i kullanma (opsiyonel)
+          if (daysSinceCache > 30) {
+            debugPrint("Cache çok eski ($daysSinceCache gün), yeniden analiz yapılıyor.");
+            return null;
+          }
+        }
+        
+        debugPrint("Cache'den veri bulundu: $signature");
+        return data;
+      }
+      
+      return null;
+    } catch (e) {
+      debugPrint("Cache okuma hatası: $e");
+      return null; // Hata durumunda null dön, remote'tan al
+    }
   }
 
   Future<void> cacheAnalysis(String signature, Map<String, dynamic> data) async {
     try {
-      await _firestore.collection('ai_cache').doc(signature).set(data);
+      // Cache'e kaydederken timestamp ekle
+      final dataWithTimestamp = Map<String, dynamic>.from(data);
+      dataWithTimestamp['cachedAt'] = FieldValue.serverTimestamp();
+      
+      await _firestore.collection('ai_cache').doc(signature).set(dataWithTimestamp);
+      debugPrint("Analiz cache'lendi: $signature");
     } catch (e) {
-      debugPrint("Cache Hatası: $e");
+      debugPrint("Cache kaydetme hatası: $e");
+      // Cache hatası kritik değil, devam et
     }
   }
 }

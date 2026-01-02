@@ -17,13 +17,30 @@ class AiRepositoryImpl implements IAiRepository {
       debugPrint("AI Repo: Analiz başlatılıyor...");
       final signature = AiHelpers.generateVehicleSignature(vehicle);
 
-      // 1. Remote'tan al (Şimdilik direkt remote)
-      debugPrint("AI Repo: Remote DataSource çağrılıyor...");
+      // 1. Önce cache'den kontrol et
+      debugPrint("AI Repo: Cache kontrol ediliyor...");
+      final cachedData = await _localDataSource.getCachedAnalysis(signature);
+      
+      if (cachedData != null) {
+        debugPrint("AI Repo: Cache'den veri bulundu!");
+        return AiAnalysisResponse.fromJson(cachedData);
+      }
+
+      // 2. Cache'de yoksa remote'tan al
+      debugPrint("AI Repo: Cache'de veri yok, Remote DataSource çağrılıyor...");
       final rawJson = await _remoteDataSource.fetchAnalysis(vehicle.toMap());
 
-      // 2. Parse et
+      // 3. Parse et
       debugPrint("AI Repo: JSON parse ediliyor...");
       final response = AiAnalysisResponse.fromJson(rawJson);
+      
+      // 4. Cache'e kaydet (async, hata olursa da devam et)
+      try {
+        await _localDataSource.cacheAnalysis(signature, rawJson);
+        debugPrint("AI Repo: Veri cache'lendi.");
+      } catch (cacheError) {
+        debugPrint("AI Repo: Cache kaydetme hatası (önemsiz): $cacheError");
+      }
       
       debugPrint("AI Repo: Başarılı!");
       return response;
