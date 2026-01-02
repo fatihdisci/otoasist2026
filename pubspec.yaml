@@ -39,3 +39,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/data/car_data.json
+    - .env
