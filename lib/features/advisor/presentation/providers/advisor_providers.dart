@@ -11,7 +11,7 @@ final aiLocalDataSourceProvider = Provider((ref) {
 final aiRemoteDataSourceProvider = Provider((ref) {
   // --- KRİTİK NOKTA: API KEY ---
   // Buraya kendi API anahtarını tırnaklar içine yapıştır.
-  const String apiKey = "AIzaSyDiCXpzka6TgLbDzI8_BK5SuSjx-DkuQb0"; 
+  const String apiKey = "apikeyyazılacak"; 
   
   return AiRemoteDataSource(apiKey);
 });
